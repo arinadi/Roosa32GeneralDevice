@@ -1,0 +1,10 @@
+//Wifi Setting
+const char *ssid = "YOUR-SSID";
+const char *password = "ssid-password";
+
+//OWM API
+String endpoint = "https://api.openweathermap.org/data/2.5/weather?q=Yogyakarta,id&APPID=";
+String key = "your key";
+
+unsigned long CheckWifiDelay = 10000;
+unsigned long HttpDelay = 15000;
