@@ -1,4 +1,4 @@
-# Rossa32-GeneralDevice
+# Roosa32GeneralDevice
 IOT Device ESP32 Based
 ## How To Use
 1. Open with Arduino IDE
