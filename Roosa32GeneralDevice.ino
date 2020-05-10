@@ -1,14 +1,66 @@
-#include <Arduino.h>
 #include <WiFi.h>
-#include <HTTPClient.h>  //make HTTP requests using a very simple interface
+#include <HTTPClient.h> //make HTTP requests using a very simple interface
 #include <ArduinoJson.h> //Parse JSON, preallocated memory pool to store the JsonObject tree, this is done by the StaticJsonBuffer.
 
 #include "config.h"
 
+// Interface
+//void checkWifiStatus();
+//void doHttpRequest();
+//void restartDevice();
+//void wifiInit();
+//void wifiScan();
+
 //Init Variable
 unsigned long CheckWifiTimer = 0;
 unsigned long HttpTimer = 0;
+
+DynamicJsonDocument deviceData(1024);
 //
+
+void setup()
+{
+  // put your setup code here, to run once:
+  Serial.begin(115200);
+
+  wifiInit();
+}
+
+void loop()
+{
+  // put your main code here, to run repeatedly:
+  //Check Coundown
+  long CheckWifiCoundown = CheckWifiDelay - (millis() - CheckWifiTimer);
+  long HttpCoundown = HttpDelay - (millis() - HttpTimer);
+  // Serial.println(String("Millis :") + millis());
+  // Serial.println(String("timerDelay :") + timerDelay);
+  // Serial.println(String("Cowndown :") + (timerDelay - (millis() - lastTime)));
+
+  if (CheckWifiCoundown < 0)
+  {
+    //update Timer
+    CheckWifiTimer = millis();
+    checkWifiStatus();
+  }
+
+  if (HttpCoundown < 0 && (WiFi.status() == WL_CONNECTED))
+  {
+    //update LastTime
+    HttpTimer = millis();
+    doHttpRequest();
+  }
+}
+
+void restartDevice(bool skipCoolingDown = false)
+{
+  if (skipCoolingDown == false)
+  {
+    Serial.println("Please Wait.. Cooling down Device");
+    delay(60 * 5 * 1000);
+  }
+  Serial.println("Restart Device");
+  ESP.restart();
+}
 
 void wifiInit()
 {
@@ -76,6 +128,9 @@ void wifiScan()
       Serial.print(")");
       Serial.println((WiFi.encryptionType(i) == WIFI_AUTH_OPEN) ? " " : "*");
       delay(10);
+      deviceData["device"]["wifi"]["scan"][i]["ssid"] = WiFi.SSID(i);
+      deviceData["device"]["wifi"]["scan"][i]["rssi"] = WiFi.RSSI(i);
+      deviceData["device"]["wifi"]["scan"][i]["encryption_type"] = (WiFi.encryptionType(i) == WIFI_AUTH_OPEN) ? " " : "*";
     }
   }
   Serial.println("");
@@ -91,6 +146,8 @@ void checkWifiStatus()
   {
     wifiInit();
   }
+  deviceData["device"]["wifi"]["connected"]["ssid"] = ssid;
+  deviceData["device"]["wifi"]["connected"]["rssi"] = WiFi.RSSI();
 }
 
 void doHttpRequest()
@@ -99,15 +156,22 @@ void doHttpRequest()
   HTTPClient http;
 
   // Your Domain name with URL path or IP address with path
-  String request = endpoint + key;
+  String request = endpoint;
   Serial.println(String("request :") + request);
-  http.begin(request);       //Specify the URL
-  int httpCode = http.GET(); //Make the request
+  http.begin(request); //Specify the URL
+  http.addHeader("secret-key", key);
+
+  String postData;
+  serializeJson(deviceData, postData);
+
+  Serial.println(postData);
+
+  int httpCode = http.POST(postData); //Make the request
   int retry = 0;
   int maxAttempt = 60 * 5;
   while (retry < maxAttempt && httpCode <= 0)
   {
-    httpCode = http.GET();
+    int httpCode = http.POST(postData);
     delay(1000);
     Serial.println("Make the request");
     retry++;
@@ -120,14 +184,15 @@ void doHttpRequest()
 
   if (httpCode > 0)
   { //Check for the returning code
+     deviceData.clear();
 
     String response = http.getString();
     Serial.println(httpCode);
 
     DynamicJsonDocument doc(200);
     deserializeJson(doc, response);
-    String weather = doc["weather"][0]["main"];
-    Serial.println(weather);
+    String message = doc["message"];
+    Serial.println(message);
   }
 
   else
@@ -135,48 +200,4 @@ void doHttpRequest()
     Serial.println("Error on HTTP request");
   }
   http.end(); //Free the resources
-}
-
-void restartDevice(bool skipCoolingDown = false)
-{
-  if (skipCoolingDown == false)
-  {
-    Serial.println("Please Wait.. Cooling down Device");
-    delay(60 * 5 * 1000);
-  }
-  Serial.println("Restart Device");
-  ESP.restart();
-}
-
-void setup()
-{
-  // put your setup code here, to run once:
-  Serial.begin(9600);
-
-  wifiInit();
-}
-
-void loop()
-{
-  // put your main code here, to run repeatedly:
-  //Check Coundown
-  long CheckWifiCoundown = CheckWifiDelay - (millis() - CheckWifiTimer);
-  long HttpCoundown = HttpDelay - (millis() - HttpTimer);
-  // Serial.println(String("Millis :") + millis());
-  // Serial.println(String("timerDelay :") + timerDelay);
-  // Serial.println(String("Cowndown :") + (timerDelay - (millis() - lastTime)));
-
-  if (CheckWifiCoundown < 0)
-  {
-    //update Timer
-    CheckWifiTimer = millis();
-    checkWifiStatus();
-  }
-
-  if (HttpCoundown < 0 && (WiFi.status() == WL_CONNECTED))
-  {
-    //update LastTime
-    HttpTimer = millis();
-    doHttpRequest();
-  }
 }

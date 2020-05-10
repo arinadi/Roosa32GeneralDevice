@@ -1,0 +1,12 @@
+//Wifi Setting
+const char *ssid = "YOGS";
+const char *password = "makanbang";
+
+//API
+String endpoint = "https://naracenter.herokuapp.com/api/device_update";
+String key = "test123";
+
+boolean isOfflineAllowed = true;
+
+unsigned long CheckWifiDelay = 40 * 1000;
+unsigned long HttpDelay = 60 * 1000;
