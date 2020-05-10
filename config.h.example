@@ -1,9 +1,9 @@
 //Wifi Setting
-const char *ssid = "YOGS";
-const char *password = "makanbang";
+const char *ssid = "****";
+const char *password = "****";
 
 //API
-String endpoint = "https://naracenter.herokuapp.com/api/device_update";
+String endpoint = "https://your.iot.center/api/device_update";
 String key = "test123";
 
 boolean isOfflineAllowed = true;
